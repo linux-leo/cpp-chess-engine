@@ -62,6 +62,8 @@ int main() {
 
         searching = true;
       } else if (command == "stop") {
+        searching = false;
+        std::cout << "bestmove " << uci::moveToUci(searchTask.get()) << std::endl;
       } else if (command == "quit") {
         running = false;
       } else {
@@ -129,7 +131,7 @@ int negamax(Board board, int depth, int alpha, int beta) {
     return eval(board, moves);
   }
 
-  if (moves.size() == 0) {
+  if (moves.empty()) {
     if (board.inCheck()) {
       if (board.sideToMove() == Color::WHITE) {
         return -999;
