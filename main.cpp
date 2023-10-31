@@ -1,9 +1,11 @@
 #include "chess.hpp"
 #include <future>
+#include <thread>
+#include <cmath>
 using namespace chess;
 
-int eval(Board board, Movelist moves);
-int pieceeval(Board board);
+float eval(Board board, Movelist moves);
+float pieceeval(Board board);
 Move start_negamax(Board board, int depth);
 int negamax(Board board, int depth, int alpha, int beta);
 
@@ -75,32 +77,42 @@ int main() {
         searchTask.wait_for(zeroseconds) == std::future_status::ready) {
       std::cout << "bestmove " << uci::moveToUci(searchTask.get()) << std::endl;
     }
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
   return 0;
 }
 
-int eval(Board board, Movelist moves) {
-  int materialadvantage = pieceeval(board);
-  return materialadvantage + moves.size();
+float eval(Board board, Movelist moves) {
+  board.makeNullMove();
+  Movelist enemymoves;
+  movegen::legalmoves(enemymoves, board);
+  board.unmakeNullMove();
+  float mymobility = moves.size();
+  float enemymobility = enemymoves.size();
+  float materialadvantage = pieceeval(board);
+  return std::log2(materialadvantage * (mymobility / enemymobility));
 }
 
-int pieceeval(Board board) {
-  int eval = 0;
-  eval += builtin::popcount(board.pieces(PieceType::PAWN, Color::WHITE));
-  eval += 3 * builtin::popcount(board.pieces(PieceType::KNIGHT, Color::WHITE) |
+float pieceeval(Board board) {
+  uint whiteeval = 0;
+  uint blackeval = 0;
+  float materialEval;
+  whiteeval += builtin::popcount(board.pieces(PieceType::PAWN, Color::WHITE));
+  whiteeval += 3 * builtin::popcount(board.pieces(PieceType::KNIGHT, Color::WHITE) |
                                 board.pieces(PieceType::BISHOP, Color::WHITE));
-  eval += 5 * builtin::popcount(board.pieces(PieceType::ROOK, Color::WHITE));
-  eval += 9 * builtin::popcount(board.pieces(PieceType::QUEEN, Color::WHITE));
-  eval -= builtin::popcount(board.pieces(PieceType::PAWN, Color::BLACK));
-  eval -= 3 * builtin::popcount(board.pieces(PieceType::KNIGHT, Color::BLACK) |
+  whiteeval += 5 * builtin::popcount(board.pieces(PieceType::ROOK, Color::WHITE));
+  whiteeval += 9 * builtin::popcount(board.pieces(PieceType::QUEEN, Color::WHITE));
+  blackeval += builtin::popcount(board.pieces(PieceType::PAWN, Color::BLACK));
+  blackeval += 3 * builtin::popcount(board.pieces(PieceType::KNIGHT, Color::BLACK) |
                                 board.pieces(PieceType::BISHOP, Color::BLACK));
-  eval -= 5 * builtin::popcount(board.pieces(PieceType::ROOK, Color::BLACK));
-  eval -= 9 * builtin::popcount(board.pieces(PieceType::QUEEN, Color::BLACK));
+  blackeval += 5 * builtin::popcount(board.pieces(PieceType::ROOK, Color::BLACK));
+  blackeval += 9 * builtin::popcount(board.pieces(PieceType::QUEEN, Color::BLACK));
   if (board.sideToMove() == Color::WHITE) {
-    return eval;
+    materialEval = (float)whiteeval / (float)blackeval;
   } else {
-    return -eval;
+    materialEval = (float)blackeval / (float)whiteeval;
   }
+  return materialEval;
 }
 
 Move start_negamax(Board board, int depth) {
