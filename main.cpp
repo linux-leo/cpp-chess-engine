@@ -5,7 +5,6 @@
 using namespace chess;
 
 float eval(Board board, Movelist moves);
-float pieceeval(Board board);
 Move start_negamax(Board board, int depth);
 int negamax(Board board, int depth, int alpha, int beta);
 
@@ -45,8 +44,7 @@ int main() {
       } else if (command == "position") {
         commandline >> command;
         if (command == "startpos") {
-          board =
-              Board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+          board = Board(constants::STARTPOS);
           commandline >> command;
           if (command == "moves") {
             while (commandline >> command) {
@@ -59,7 +57,7 @@ int main() {
       } else if (command == "ucinewgame") {
       } else if (command == "go") {
         searchTask =
-          std::async(mode, [board]() mutable {return start_negamax(board, 5);});
+          std::async(mode, [board]() mutable {return start_negamax(board, 7);});
           // create a thread-local copy
 
         searching = true;
@@ -82,37 +80,28 @@ int main() {
   return 0;
 }
 
-float eval(Board board, Movelist moves) {
-  board.makeNullMove();
-  Movelist enemymoves;
-  movegen::legalmoves(enemymoves, board);
-  board.unmakeNullMove();
+float eval(Board board, Movelist moves,  Movelist enemymoves) {
   float mymobility = moves.size();
   float enemymobility = enemymoves.size();
-  float materialadvantage = pieceeval(board);
-  return std::log2(materialadvantage * (mymobility / enemymobility));
-}
-
-float pieceeval(Board board) {
-  uint whiteeval = 0;
-  uint blackeval = 0;
-  float materialEval;
-  whiteeval += builtin::popcount(board.pieces(PieceType::PAWN, Color::WHITE));
-  whiteeval += 3 * builtin::popcount(board.pieces(PieceType::KNIGHT, Color::WHITE) |
-                                board.pieces(PieceType::BISHOP, Color::WHITE));
-  whiteeval += 5 * builtin::popcount(board.pieces(PieceType::ROOK, Color::WHITE));
-  whiteeval += 9 * builtin::popcount(board.pieces(PieceType::QUEEN, Color::WHITE));
-  blackeval += builtin::popcount(board.pieces(PieceType::PAWN, Color::BLACK));
-  blackeval += 3 * builtin::popcount(board.pieces(PieceType::KNIGHT, Color::BLACK) |
-                                board.pieces(PieceType::BISHOP, Color::BLACK));
-  blackeval += 5 * builtin::popcount(board.pieces(PieceType::ROOK, Color::BLACK));
-  blackeval += 9 * builtin::popcount(board.pieces(PieceType::QUEEN, Color::BLACK));
+  float materialadvantage;
+  uint weval = 0;
+  uint beval = 0;
+  weval += 1 * builtin::popcount(board.pieces(PieceType::PAWN, Color::WHITE));
+  weval += 3 * builtin::popcount(board.pieces(PieceType::KNIGHT, Color::WHITE) |
+                                 board.pieces(PieceType::BISHOP, Color::WHITE));
+  weval += 5 * builtin::popcount(board.pieces(PieceType::ROOK, Color::WHITE));
+  weval += 9 * builtin::popcount(board.pieces(PieceType::QUEEN, Color::WHITE));
+  beval += 1 * builtin::popcount(board.pieces(PieceType::PAWN, Color::BLACK));
+  beval += 3 * builtin::popcount(board.pieces(PieceType::KNIGHT, Color::BLACK) |
+                                 board.pieces(PieceType::BISHOP, Color::BLACK));
+  beval += 5 * builtin::popcount(board.pieces(PieceType::ROOK, Color::BLACK));
+  beval += 9 * builtin::popcount(board.pieces(PieceType::QUEEN, Color::BLACK));
   if (board.sideToMove() == Color::WHITE) {
-    materialEval = (float)whiteeval / (float)blackeval;
+    materialadvantage = (float)weval / (float)beval;
   } else {
-    materialEval = (float)blackeval / (float)whiteeval;
+    materialadvantage = (float)beval / (float)weval;
   }
-  return materialEval;
+  return std::log2(materialadvantage * (mymobility / enemymobility));
 }
 
 Move start_negamax(Board board, int depth) {
@@ -139,19 +128,19 @@ int negamax(Board board, int depth, int alpha, int beta) {
   Movelist moves;
   movegen::legalmoves(moves, board);
 
-  if (depth == 0) {
-    return eval(board, moves);
-  }
-
   if (moves.empty()) {
     if (board.inCheck()) {
-      if (board.sideToMove() == Color::WHITE) {
-        return -999;
-      } else {
-        return 999;
-      }
+      return -999;
     }
     return 0;
+  }
+  
+  if (depth == 0) {
+    board.makeNullMove();
+    Movelist enemymoves;
+    movegen::legalmoves(enemymoves, board);
+    board.unmakeNullMove();
+    return eval(board, moves, enemymoves);
   }
 
   for (int i = 0; i < moves.size(); i++) {
