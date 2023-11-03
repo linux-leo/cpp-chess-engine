@@ -83,25 +83,24 @@ int main() {
 float eval(Board board, Movelist legalmoves,  Movelist opponentmoves) {
   Bitboard wPawns = board.pieces(PieceType::PAWN, Color::WHITE);
   Bitboard bPawns = board.pieces(PieceType::PAWN, Color::BLACK);
-
-  using builtin::popcount;
+  constexpr auto popcnt = builtin::popcount; // alias
   
-  uint wM = 1 * popcount(wPawns)
-          + 3 * popcount(board.pieces(PieceType::KNIGHT, Color::WHITE) |
-                         board.pieces(PieceType::BISHOP, Color::WHITE))
-          + 5 * popcount(board.pieces(PieceType::ROOK, Color::WHITE))
-          + 9 * popcount(board.pieces(PieceType::QUEEN, Color::WHITE));
-  uint bM = 1 * popcount(bPawns)
-          + 3 * popcount(board.pieces(PieceType::KNIGHT, Color::BLACK) |
-                         board.pieces(PieceType::BISHOP, Color::BLACK))
-          + 5 * popcount(board.pieces(PieceType::ROOK, Color::BLACK))
-          + 9 * popcount(board.pieces(PieceType::QUEEN, Color::BLACK));
+  uint wMatrl = 1 * popcnt(wPawns)
+              + 3 * popcnt(board.pieces(PieceType::KNIGHT, Color::WHITE) |
+                           board.pieces(PieceType::BISHOP, Color::WHITE))
+              + 5 * popcnt(board.pieces(PieceType::ROOK, Color::WHITE))
+              + 9 * popcnt(board.pieces(PieceType::QUEEN, Color::WHITE));
+  uint bMatrl = 1 * popcnt(bPawns)
+              + 3 * popcnt(board.pieces(PieceType::KNIGHT, Color::BLACK) |
+                           board.pieces(PieceType::BISHOP, Color::BLACK))
+              + 5 * popcnt(board.pieces(PieceType::ROOK, Color::BLACK))
+              + 9 * popcnt(board.pieces(PieceType::QUEEN, Color::BLACK));
 
   // Detect white doubled pawns
-  float weval = static_cast<float>(wM) - popcount(wPawns & (wPawns << 8)) * .5f;
+  float weval = static_cast<float>(wMatrl) - popcnt(wPawns & (wPawns << 8))*.5f;
 
   // Detect black doubled pawns
-  float beval = static_cast<float>(bM) - popcount(bPawns & (bPawns << 8)) * .5f;
+  float beval = static_cast<float>(bMatrl) - popcnt(bPawns & (bPawns << 8))*.5f;
 
   float eval = (board.sideToMove() == Color::WHITE) ? weval/beval : beval/weval;
 
