@@ -81,27 +81,34 @@ int main() {
 }
 
 float eval(Board board, Movelist moves,  Movelist enemymoves) {
-  float mymobility = moves.size();
-  float enemymobility = enemymoves.size();
-  float materialadvantage;
-  uint weval = 0;
-  uint beval = 0;
-  weval += 1 * builtin::popcount(board.pieces(PieceType::PAWN, Color::WHITE));
-  weval += 3 * builtin::popcount(board.pieces(PieceType::KNIGHT, Color::WHITE) |
+  Bitboard whitePawns = board.pieces(PieceType::PAWN, Color::WHITE);
+  Bitboard blackPawns = board.pieces(PieceType::PAWN, Color::BLACK);
+
+  uint wmeval = 0;
+  uint bmeval = 0;
+
+  wmeval += 1 * builtin::popcount(whitePawns);
+  wmeval += 3 * builtin::popcount(board.pieces(PieceType::KNIGHT, Color::WHITE) |
                                  board.pieces(PieceType::BISHOP, Color::WHITE));
-  weval += 5 * builtin::popcount(board.pieces(PieceType::ROOK, Color::WHITE));
-  weval += 9 * builtin::popcount(board.pieces(PieceType::QUEEN, Color::WHITE));
-  beval += 1 * builtin::popcount(board.pieces(PieceType::PAWN, Color::BLACK));
-  beval += 3 * builtin::popcount(board.pieces(PieceType::KNIGHT, Color::BLACK) |
+  wmeval += 5 * builtin::popcount(board.pieces(PieceType::ROOK, Color::WHITE));
+  wmeval += 9 * builtin::popcount(board.pieces(PieceType::QUEEN, Color::WHITE));
+  bmeval += 1 * builtin::popcount(blackPawns);
+  bmeval += 3 * builtin::popcount(board.pieces(PieceType::KNIGHT, Color::BLACK) |
                                  board.pieces(PieceType::BISHOP, Color::BLACK));
-  beval += 5 * builtin::popcount(board.pieces(PieceType::ROOK, Color::BLACK));
-  beval += 9 * builtin::popcount(board.pieces(PieceType::QUEEN, Color::BLACK));
+  bmeval += 5 * builtin::popcount(board.pieces(PieceType::ROOK, Color::BLACK));
+  bmeval += 9 * builtin::popcount(board.pieces(PieceType::QUEEN, Color::BLACK));
+
+  // Detect white doubled pawns
+  float weval = (float)wmeval - ((float)builtin::popcount(whitePawns & (whitePawns << 8)) * 0.5);
+
+  // Detect black doubled pawns
+  float beval = (float)bmeval - ((float)builtin::popcount(blackPawns & (blackPawns >> 8)) * 0.5);
+
   if (board.sideToMove() == Color::WHITE) {
-    materialadvantage = (float)weval / (float)beval;
+    return std::log2((weval / beval) * ((float)moves.size() / (float)enemymoves.size()));
   } else {
-    materialadvantage = (float)beval / (float)weval;
+    return std::log2((beval / weval) * ((float)moves.size() / (float)enemymoves.size()));
   }
-  return std::log2(materialadvantage * (mymobility / enemymobility));
 }
 
 Move start_negamax(Board board, int depth) {
