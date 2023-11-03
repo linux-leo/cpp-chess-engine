@@ -96,10 +96,10 @@ float eval(Board board, Movelist moves,  Movelist enemymoves) {
           + 9 * builtin::popcount(board.pieces(PieceType::QUEEN, Color::BLACK));
 
   // Detect white doubled pawns
-  float weval = wm - (builtin::popcount(whitePawns & (whitePawns << 8)) * 0.5f);
+  float weval = (float)wm-builtin::popcount(whitePawns & (whitePawns << 8))*.5f;
 
   // Detect black doubled pawns
-  float beval = bm - (builtin::popcount(blackPawns & (blackPawns >> 8)) * 0.5f);
+  float beval = (float)bm-builtin::popcount(blackPawns & (blackPawns >> 8))*.5f;
 
   float eval = (board.sideToMove() == Color::WHITE) ? weval/beval : beval/weval;
   return std::log2(eval * ((float)moves.size() / (float)enemymoves.size()));
