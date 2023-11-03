@@ -63,7 +63,7 @@ int main() {
         searching = true;
       } else if (command == "stop") {
         searching = false;
-        std::cout << "bestmove " << uci::moveToUci(searchTask.get()) << std::endl;
+        std::cout << "bestmove " << uci::moveToUci(searchTask.get())<<std::endl;
       } else if (command == "quit") {
         running = false;
       } else {
@@ -73,7 +73,7 @@ int main() {
     }
     if (searching && searchTask.valid() &&
         searchTask.wait_for(zeroseconds) == std::future_status::ready) {
-      std::cout << "bestmove " << uci::moveToUci(searchTask.get()) << std::endl;
+      std::cout << "bestmove " << uci::moveToUci(searchTask.get())<<std::endl;
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
@@ -84,31 +84,27 @@ float eval(Board board, Movelist moves,  Movelist enemymoves) {
   Bitboard whitePawns = board.pieces(PieceType::PAWN, Color::WHITE);
   Bitboard blackPawns = board.pieces(PieceType::PAWN, Color::BLACK);
 
-  uint wmeval = 0;
-  uint bmeval = 0;
-
-  wmeval += 1 * builtin::popcount(whitePawns);
-  wmeval += 3 * builtin::popcount(board.pieces(PieceType::KNIGHT, Color::WHITE) |
-                                 board.pieces(PieceType::BISHOP, Color::WHITE));
-  wmeval += 5 * builtin::popcount(board.pieces(PieceType::ROOK, Color::WHITE));
-  wmeval += 9 * builtin::popcount(board.pieces(PieceType::QUEEN, Color::WHITE));
-  bmeval += 1 * builtin::popcount(blackPawns);
-  bmeval += 3 * builtin::popcount(board.pieces(PieceType::KNIGHT, Color::BLACK) |
-                                 board.pieces(PieceType::BISHOP, Color::BLACK));
-  bmeval += 5 * builtin::popcount(board.pieces(PieceType::ROOK, Color::BLACK));
-  bmeval += 9 * builtin::popcount(board.pieces(PieceType::QUEEN, Color::BLACK));
+  uint wm = 1 * builtin::popcount(whitePawns)
+          + 3 * builtin::popcount(board.pieces(PieceType::KNIGHT, Color::WHITE)|
+                                  board.pieces(PieceType::BISHOP, Color::WHITE))
+          + 5 * builtin::popcount(board.pieces(PieceType::ROOK, Color::WHITE))
+          + 9 * builtin::popcount(board.pieces(PieceType::QUEEN, Color::WHITE));
+  uint bm = 1 * builtin::popcount(blackPawns)
+          + 3 * builtin::popcount(board.pieces(PieceType::KNIGHT, Color::BLACK)|
+                                  board.pieces(PieceType::BISHOP, Color::BLACK))
+          + 5 * builtin::popcount(board.pieces(PieceType::ROOK, Color::BLACK))
+          + 9 * builtin::popcount(board.pieces(PieceType::QUEEN, Color::BLACK));
 
   // Detect white doubled pawns
-  float weval = (float)wmeval - ((float)builtin::popcount(whitePawns & (whitePawns << 8)) * 0.5);
+  float weval = (float)wm
+              - (float)builtin::popcount(whitePawns & (whitePawns << 8)) * 0.5;
 
   // Detect black doubled pawns
-  float beval = (float)bmeval - ((float)builtin::popcount(blackPawns & (blackPawns >> 8)) * 0.5);
+  float beval = (float)bm
+              - (float)builtin::popcount(blackPawns & (blackPawns >> 8)) * 0.5;
 
-  if (board.sideToMove() == Color::WHITE) {
-    return std::log2((weval / beval) * ((float)moves.size() / (float)enemymoves.size()));
-  } else {
-    return std::log2((beval / weval) * ((float)moves.size() / (float)enemymoves.size()));
-  }
+  float eval = (board.sideToMove() == Color::WHITE) ? weval/beval : beval/weval;
+  return std::log2(eval * ((float)moves.size() / (float)enemymoves.size()));
 }
 
 Move start_negamax(Board board, int depth) {
