@@ -80,29 +80,34 @@ int main() {
   return 0;
 }
 
-float eval(Board board, Movelist moves,  Movelist enemymoves) {
-  Bitboard whitePawns = board.pieces(PieceType::PAWN, Color::WHITE);
-  Bitboard blackPawns = board.pieces(PieceType::PAWN, Color::BLACK);
+float eval(Board board, Movelist legalmoves,  Movelist opponentmoves) {
+  Bitboard wPawns = board.pieces(PieceType::PAWN, Color::WHITE);
+  Bitboard bPawns = board.pieces(PieceType::PAWN, Color::BLACK);
 
-  uint wm = 1 * builtin::popcount(whitePawns)
-          + 3 * builtin::popcount(board.pieces(PieceType::KNIGHT, Color::WHITE)|
-                                  board.pieces(PieceType::BISHOP, Color::WHITE))
-          + 5 * builtin::popcount(board.pieces(PieceType::ROOK, Color::WHITE))
-          + 9 * builtin::popcount(board.pieces(PieceType::QUEEN, Color::WHITE));
-  uint bm = 1 * builtin::popcount(blackPawns)
-          + 3 * builtin::popcount(board.pieces(PieceType::KNIGHT, Color::BLACK)|
-                                  board.pieces(PieceType::BISHOP, Color::BLACK))
-          + 5 * builtin::popcount(board.pieces(PieceType::ROOK, Color::BLACK))
-          + 9 * builtin::popcount(board.pieces(PieceType::QUEEN, Color::BLACK));
+  using builtin::popcount;
+  
+  uint wM = 1 * popcount(wPawns)
+          + 3 * popcount(board.pieces(PieceType::KNIGHT, Color::WHITE) |
+                         board.pieces(PieceType::BISHOP, Color::WHITE))
+          + 5 * popcount(board.pieces(PieceType::ROOK, Color::WHITE))
+          + 9 * popcount(board.pieces(PieceType::QUEEN, Color::WHITE));
+  uint bM = 1 * popcount(bPawns)
+          + 3 * popcount(board.pieces(PieceType::KNIGHT, Color::BLACK) |
+                         board.pieces(PieceType::BISHOP, Color::BLACK))
+          + 5 * popcount(board.pieces(PieceType::ROOK, Color::BLACK))
+          + 9 * popcount(board.pieces(PieceType::QUEEN, Color::BLACK));
 
   // Detect white doubled pawns
-  float weval = (float)wm-builtin::popcount(whitePawns & (whitePawns << 8))*.5f;
+  float weval = static_cast<float>(wM) - popcount(wPawns & (wPawns << 8)) * .5f;
 
   // Detect black doubled pawns
-  float beval = (float)bm-builtin::popcount(blackPawns & (blackPawns >> 8))*.5f;
+  float beval = static_cast<float>(bM) - popcount(bPawns & (bPawns << 8)) * .5f;
 
   float eval = (board.sideToMove() == Color::WHITE) ? weval/beval : beval/weval;
-  return std::log2(eval * ((float)moves.size() / (float)enemymoves.size()));
+
+  float mobility = static_cast<float>(legalmoves.size()) / opponentmoves.size();
+
+  return std::log2(eval * mobility);
 }
 
 Move start_negamax(Board board, int depth) {
