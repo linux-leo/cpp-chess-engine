@@ -96,11 +96,15 @@ float eval(Board board, Movelist legalmoves,  Movelist opponentmoves) {
                  + 5 * builtin::popcount(board.pieces(PieceType::ROOK, BLACK))
                  + 9 * builtin::popcount(board.pieces(PieceType::QUEEN, BLACK));
 
-  // Detect white doubled pawns
-  float weval = -builtin::popcount(wPawns & (wPawns << 8))*.5f + wMaterial;
+  // Detect white doubled pawns and white pawn chains
+  float weval = -builtin::popcount(wPawns & (wPawns >> 8))*.5f
+              +  builtin::popcount(wPawns & (wPawns >> 7 | wPawns >> 9))*.33f
+              +  wMaterial;
 
-  // Detect black doubled pawns
-  float beval = -builtin::popcount(bPawns & (bPawns << 8))*.5f + bMaterial;
+  // Detect black doubled pawns and black pawn chains
+  float beval = -builtin::popcount(bPawns & (bPawns >> 8))*.5f
+              +  builtin::popcount(bPawns & (bPawns >> 7 | bPawns >> 9))*.33f
+              +  bMaterial;
 
   float eval = (board.sideToMove() == WHITE) ? weval/beval : beval/weval;
 
