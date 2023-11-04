@@ -81,28 +81,28 @@ int main() {
 }
 
 float eval(Board board, Movelist legalmoves,  Movelist opponentmoves) {
-  Bitboard wPawns = board.pieces(PieceType::PAWN, Color::WHITE);
-  Bitboard bPawns = board.pieces(PieceType::PAWN, Color::BLACK);
-  constexpr auto popcnt = builtin::popcount; // alias
-  
-  uint wMatrl = 1 * popcnt(wPawns)
-              + 3 * popcnt(board.pieces(PieceType::KNIGHT, Color::WHITE) |
-                           board.pieces(PieceType::BISHOP, Color::WHITE))
-              + 5 * popcnt(board.pieces(PieceType::ROOK, Color::WHITE))
-              + 9 * popcnt(board.pieces(PieceType::QUEEN, Color::WHITE));
-  uint bMatrl = 1 * popcnt(bPawns)
-              + 3 * popcnt(board.pieces(PieceType::KNIGHT, Color::BLACK) |
-                           board.pieces(PieceType::BISHOP, Color::BLACK))
-              + 5 * popcnt(board.pieces(PieceType::ROOK, Color::BLACK))
-              + 9 * popcnt(board.pieces(PieceType::QUEEN, Color::BLACK));
+  constexpr auto WHITE = Color::WHITE; // alias
+  constexpr auto BLACK = Color::BLACK; // alias
+  Bitboard wPawns = board.pieces(PieceType::PAWN, WHITE);
+  Bitboard bPawns = board.pieces(PieceType::PAWN, BLACK);
+  uint wMaterial = 1 * builtin::popcount(wPawns)
+                 + 3 * builtin::popcount(board.pieces(PieceType::KNIGHT, WHITE)|
+                                         board.pieces(PieceType::BISHOP, WHITE))
+                 + 5 * builtin::popcount(board.pieces(PieceType::ROOK, WHITE))
+                 + 9 * builtin::popcount(board.pieces(PieceType::QUEEN, WHITE));
+  uint bMaterial = 1 * builtin::popcount(bPawns)
+                 + 3 * builtin::popcount(board.pieces(PieceType::KNIGHT, BLACK)|
+                                         board.pieces(PieceType::BISHOP, BLACK))
+                 + 5 * builtin::popcount(board.pieces(PieceType::ROOK, BLACK))
+                 + 9 * builtin::popcount(board.pieces(PieceType::QUEEN, BLACK));
 
   // Detect white doubled pawns
-  float weval = static_cast<float>(wMatrl) - popcnt(wPawns & (wPawns << 8))*.5f;
+  float weval = -builtin::popcount(wPawns & (wPawns << 8))*.5f + wMaterial;
 
   // Detect black doubled pawns
-  float beval = static_cast<float>(bMatrl) - popcnt(bPawns & (bPawns << 8))*.5f;
+  float beval = -builtin::popcount(bPawns & (bPawns << 8))*.5f + bMaterial;
 
-  float eval = (board.sideToMove() == Color::WHITE) ? weval/beval : beval/weval;
+  float eval = (board.sideToMove() == WHITE) ? weval/beval : beval/weval;
 
   float mobility = static_cast<float>(legalmoves.size()) / opponentmoves.size();
 
