@@ -6,7 +6,7 @@ using namespace chess;
 
 float eval(Board board, Movelist moves);
 Move start_negamax(Board board, int depth);
-int negamax(Board board, int depth, int alpha, int beta);
+float negamax(Board board, int depth, float alpha, float beta);
 
 int main() {
   constexpr
@@ -57,7 +57,7 @@ int main() {
       } else if (command == "ucinewgame") {
       } else if (command == "go") {
         searchTask =
-          std::async(mode, [board]() mutable {return start_negamax(board, 7);});
+          std::async(mode, [board]() mutable {return start_negamax(board, 5);});
           // create a thread-local copy
 
         searching = true;
@@ -96,14 +96,12 @@ float eval(Board board, Movelist legalmoves,  Movelist opponentmoves) {
                  + 5 * builtin::popcount(board.pieces(PieceType::ROOK, BLACK))
                  + 9 * builtin::popcount(board.pieces(PieceType::QUEEN, BLACK));
 
-  // Detect white doubled pawns and white pawn chains
+  // Detect white doubled pawns
   float wEval = -builtin::popcount(wPawns & (wPawns >> 8))*.5f
-              +  builtin::popcount(wPawns & (wPawns >> 7 | wPawns >> 9))*.33f
               +  wMaterial;
 
-  // Detect black doubled pawns and black pawn chains
-  float bEval = -builtin::popcount(bPawns & (bPawns >> 8))*.5f
-              +  builtin::popcount(bPawns & (bPawns >> 7 | bPawns >> 9))*.33f
+  // Detect black doubled pawns
+  float bEval = -builtin::popcount(bPawns & (bPawns << 8))*.5f
               +  bMaterial;
 
   float eval = (board.sideToMove() == WHITE) ? wEval/bEval : bEval/wEval;
@@ -116,13 +114,13 @@ float eval(Board board, Movelist legalmoves,  Movelist opponentmoves) {
 Move start_negamax(Board board, int depth) {
   Movelist moves;
   movegen::legalmoves(moves, board);
-  int bestEval = -999;
+  float bestEval = -999;
   Move bestMove = NULL;
 
   for (int i = 0; i < moves.size(); i++) {
     const Move move = moves[i];
     board.makeMove(move);
-    int eval = -negamax(board, depth - 1, -999, 999);
+    float eval = -negamax(board, depth - 1, -999, 999);
     board.unmakeMove(move);
     if (eval > bestEval) {
       bestEval = eval;
@@ -130,10 +128,12 @@ Move start_negamax(Board board, int depth) {
     }
   }
 
+  std::cout << "info string eval: " << bestEval << std::endl;
+
   return bestMove;
 }
 
-int negamax(Board board, int depth, int alpha, int beta) {
+float negamax(Board board, int depth, float alpha, float beta) {
   Movelist moves;
   movegen::legalmoves(moves, board);
 
@@ -155,7 +155,7 @@ int negamax(Board board, int depth, int alpha, int beta) {
   for (int i = 0; i < moves.size(); i++) {
     const Move move = moves[i];
     board.makeMove(move);
-    int eval = -negamax(board, depth - 1, -beta, -alpha);
+    float eval = -negamax(board, depth - 1, -beta, -alpha);
     board.unmakeMove(move);
     if (eval >= beta) {
       return beta;
